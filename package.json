@@ -11,17 +11,27 @@
   },
   "dependencies": {
     "body-parser": "^1.17.2",
+    "crypto": "0.0.3",
     "ejs": "2.5.6",
-    "express": "4.15.2"
+    "express": "4.15.2",
+    "oauth-1.0a": "^2.2.0",
+    "request": "^2.81.0",
+    "xmlhttprequest": "^1.8.0"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/heroku/node-js-getting-started"
+    "url": "git+https://github.com/heroku/node-js-getting-started.git"
   },
   "keywords": [
     "node",
     "heroku",
     "express"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/heroku/node-js-getting-started/issues"
+  },
+  "homepage": "https://github.com/heroku/node-js-getting-started#readme",
+  "devDependencies": {},
+  "author": ""
 }

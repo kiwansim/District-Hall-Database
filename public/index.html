@@ -7,29 +7,34 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<!--CSS and Styles-->
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
-	<link rel="stylesheet" href="home.css" type="text/css" />
+	<link rel="stylesheet" href="stylesheets/home.css" type="text/css" />
+	<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
     <!--JS and APIs-->
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
   	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
-	<script src="index.js"> </script>
+	<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+  	<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+  	<script src="index.js"> </script>
 </head>
 
 <body>
-	<div class="row">
-  		<div class="col-md-1">
-			<h1>District Hall Event Metrics</h1>  			
+	<div class="row" id="title-wrapper">
+  		<div class="col-md-12">
+			<h1 id=title>District Hall Event Metrics</h1>  			
   		</div>
 	</div>
-	<div class="row">
-  		<div class="col-md-4">
-			
-  		</div>
-  		<div class="col-md-4">
-			
-  		</div>
-  		<div class="col-md-4">
-			<button type="button" class="btn btn-success">Import</button>
-  		</div>
+	<div class="row" id="form-wrapper">
+		<form action="">
+	  		<div class="col-md-2">
+				<p>Start Date: <input type="text" class="datepicker" id="start"></p>
+	  		</div>
+	  		<div class="col-md-2">
+				<p>End Date: <input type="text" class="datepicker" id="end"></p>
+	  		</div>
+	  		<div class="col-md-2">
+				<button type="button" class="btn btn-success" onclick="genQueryURL()">Import</button>
+	  		</div>
+	  	</form>
 	</div>
 </body>
 
