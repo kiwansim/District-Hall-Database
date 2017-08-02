@@ -42,13 +42,23 @@ var config = {
      userName: 'dh-admin', 
      password: 'Innovation!',
      server: 'districthall.database.windows.net', 
+     port: '1433',
      options: {
-           database: 'QueryTesting' 
-           , encrypt: true
+           database: 'QueryTesting', 
+           encrypt: true
         }
    }
 var connection = new Connection(config);
-console.log(config);
+
+/* When uncommented, 'Connected to DB' prints to Terminal */
+/*connection.on('connect', function(err) {
+  	  if (err) {
+   	    console.log(err)
+  	  } else {
+        console.log('Connected to DB');
+ 		queryDatabase();
+      }
+});*/
 
 app.get('/', function(request, response) {
   response.render('public/index.html');
@@ -60,7 +70,7 @@ app.post('/query', function(req, response) {
 	response.header("Access-Control-Allow-Headers", "X-Requested-With");
 	//console.log(req.body);
 	//location_ids=4520 is district hall
-	var url = req.body.url + '&location_ids=4520'+ '&event_start_date=' + req.body.event_start_date + '&event_end_date=' + req.body.event_end_date;
+	var url = req.body.url + '&location_ids=4520'+ '&sort_direction=asc&order=event_start' + '&event_start_date=' + req.body.event_start_date + '&event_end_date=' + req.body.event_end_date;
 	console.log(url);
 	var request_data = {
 		url: url,
@@ -81,20 +91,156 @@ app.post('/query', function(req, response) {
 	});
 });
 
-
-
-// Attempt to connect and execute queries if connection goes through
-/*connection.on('connect', function(err) {
-    if (err) {
-          console.log(err)
-    } else {
-           queryDatabase()
-    }
+app.post('/insertdata', function(request, response) {
+	console.log("received a request in /insertdata");
+	//console.log(request.body.event);
+	response.header("Access-Control-Allow-Origin","*");
+	response.header("Access-Control-Allow-Headers", "X-Requested-With");
+	var name = request.body.event;
+	connection.on('connect', function(err) {
+  	  if (err) {
+   	    console.log(err)
+  	  } else {
+        console.log('Connected to DB');
+        //var name = "HOLD for testing";
+        var date = "2017-09-04";
+        insertData(name, date);
+        response.send("something");
+      }
+    });
 });
+
+function insertData(name, date) {
+	console.log("Inserting '" + name + "' into Table...");
+
+    request = new Request(
+        'INSERT INTO test (event_client, b_date) OUTPUT INSERTED.Id VALUES (@event_client, @date);',
+        function(err, rowCount, rows) {
+        if (err) {
+            callback(err);
+        } else {
+            console.log(rowCount + ' row(s) inserted');
+            //callback(null, 'Nikita', 'United States');
+        }
+        });
+    request.addParameter('event_client', TYPES.NVarChar, name);
+    request.addParameter('b_date', TYPES.Date, date);
+
+    // Execute SQL statement
+    connection.execSql(request);
+}
+
+function Start(callback) {
+    console.log('Starting...');
+    callback(null, 'Jake', 'United States');
+}
+
+function Insert(name, location, callback) {
+    console.log("Inserting '" + name + "' into Table...");
+
+    request = new Request(
+        'INSERT INTO test (Name, Location) OUTPUT INSERTED.Id VALUES (@Name, @Location);',
+        function(err, rowCount, rows) {
+        if (err) {
+            callback(err);
+        } else {
+            console.log(rowCount + ' row(s) inserted');
+            callback(null, 'Nikita', 'United States');
+        }
+        });
+    request.addParameter('Name', TYPES.NVarChar, name);
+    request.addParameter('Location', TYPES.NVarChar, location);
+
+    // Execute SQL statement
+    connection.execSql(request);
+}
+
+function Update(name, location, callback) {
+    console.log("Updating Location to '" + location + "' for '" + name + "'...");
+
+    // Update the employee record requested
+    request = new Request(
+    'UPDATE TestSchema.Employees SET Location=@Location WHERE Name = @Name;',
+    function(err, rowCount, rows) {
+        if (err) {
+        callback(err);
+        } else {
+        console.log(rowCount + ' row(s) updated');
+        callback(null, 'Jared');
+        }
+    });
+    request.addParameter('Name', TYPES.NVarChar, name);
+    request.addParameter('Location', TYPES.NVarChar, location);
+
+    // Execute SQL statement
+    connection.execSql(request);
+}
+
+function Delete(name, callback) {
+    console.log("Deleting '" + name + "' from Table...");
+
+    // Delete the employee record requested
+    request = new Request(
+        'DELETE FROM TestSchema.Employees WHERE Name = @Name;',
+        function(err, rowCount, rows) {
+        if (err) {
+            callback(err);
+        } else {
+            console.log(rowCount + ' row(s) deleted');
+            callback(null);
+        }
+        });
+    request.addParameter('Name', TYPES.NVarChar, name);
+
+    // Execute SQL statement
+    connection.execSql(request);
+}
+
+function Read(callback) {
+    console.log('Reading rows from the Table...');
+
+    // Read all rows from table
+    request = new Request(
+    'SELECT Id, Name, Location FROM TestSchema.Employees;',
+    function(err, rowCount, rows) {
+    if (err) {
+        callback(err);
+    } else {
+        console.log(rowCount + ' row(s) returned');
+        callback(null);
+    }
+    });
+
+    // Print the rows read
+    var result = "";
+    request.on('row', function(columns) {
+        columns.forEach(function(column) {
+            if (column.value === null) {
+                console.log('NULL');
+            } else {
+                result += column.value + " ";
+            }
+        });
+        console.log(result);
+        result = "";
+    });
+
+    // Execute SQL statement
+    connection.execSql(request);
+}
+
+function Complete(err, result) {
+    if (err) {
+        callback(err);
+    } else {
+        console.log("Done!");
+    }
+}
 
 function queryDatabase()
    { console.log('Reading rows from the Table...');
 
+   	request = new Request('UPDATE');
        // Read all rows from table
      request = new Request(
      		'select * from test',
@@ -111,4 +257,4 @@ function queryDatabase()
          });
              });
      connection.execSql(request);
-   }*/
+   }
