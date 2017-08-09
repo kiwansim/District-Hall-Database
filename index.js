@@ -6,6 +6,7 @@ var oauth = require('oauth-1.0a');
 var request = require('request');
 var Connection = require('tedious').Connection;
 var Request = require('tedious').Request;
+var TYPES = require('tedious').TYPES;
 
 app.use(express.static(__dirname + '/public'));
 app.use(bodyParser.json());
@@ -48,7 +49,6 @@ var config = {
            encrypt: true
         }
    }
-var connection = new Connection(config);
 
 /* When uncommented, 'Connected to DB' prints to Terminal */
 /*connection.on('connect', function(err) {
@@ -91,30 +91,54 @@ app.post('/query', function(req, response) {
 	});
 });
 
+app.post('/account', function(req, response) {
+  console.log("received a request in /account");
+  response.header("Access-Control-Allow-Origin","*");
+  response.header("Access-Control-Allow-Headers", "X-Requested-With");
+  var url = req.body.url;
+  var request_data = {
+    url: url,
+    method: 'GET'
+  };
+  request({
+    url: request_data.url,
+    method: request_data.method,
+    headers: tripleseat.toHeader(tripleseat.authorize(request_data))
+    }, function(err, res, account) {
+      if(err) {
+        console.log('An error occurred processing the request:');
+        console.log(err);
+        return;
+      }
+    var data = JSON.parse(account);
+    response.json(account);
+  });
+});
+
 app.post('/insertdata', function(request, response) {
+	var connection = new Connection(config);
 	console.log("received a request in /insertdata");
-	//console.log(request.body.event);
+	console.log(request.body);
 	response.header("Access-Control-Allow-Origin","*");
 	response.header("Access-Control-Allow-Headers", "X-Requested-With");
-	var name = request.body.event;
+	/*var name = request.body.event;
 	connection.on('connect', function(err) {
   	  if (err) {
    	    console.log(err)
   	  } else {
         console.log('Connected to DB');
-        //var name = "HOLD for testing";
         var date = "2017-09-04";
-        insertData(name, date);
+        insertData(name, date, connection);
         response.send("something");
       }
-    });
+    });*/
 });
 
-function insertData(name, date) {
+function insertData(name, date, connection) {
 	console.log("Inserting '" + name + "' into Table...");
+	// 'INSERT INTO test (event_client, b_date) OUTPUT INSERTED.Id VALUES (@e, @d);'
 
-    request = new Request(
-        'INSERT INTO test (event_client, b_date) OUTPUT INSERTED.Id VALUES (@event_client, @date);',
+    request = new Request("INSERT INTO test2 (event_client, b_date) VALUES (@e, @d)",
         function(err, rowCount, rows) {
         if (err) {
             callback(err);
@@ -123,8 +147,8 @@ function insertData(name, date) {
             //callback(null, 'Nikita', 'United States');
         }
         });
-    request.addParameter('event_client', TYPES.NVarChar, name);
-    request.addParameter('b_date', TYPES.Date, date);
+    request.addParameter('e', TYPES.NVarChar, name);
+    request.addParameter('d', TYPES.Date, date);
 
     // Execute SQL statement
     connection.execSql(request);
