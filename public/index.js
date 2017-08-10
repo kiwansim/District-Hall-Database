@@ -1,7 +1,9 @@
 // find out how to delete events after each request
 //var events = [];
 //var events = {"ev_objs": {}};
-events = {results: []};
+//var events = {"results": []};
+var events = {};
+
 // calendar on UI
 $( function() {
    	$( ".datepicker" ).datepicker();
@@ -23,23 +25,26 @@ function testInsert() {
 }
 
 function dbInsert(event_arr) {
+	var testjson = {
+		"results": [{"event_name": "name1", "event_date": "date1"}, {"event_name": "name2", "event_date": "date2"}]
+	};
+	/*console.log("in db insert", testjson);
+	console.log(JSON.stringify(testjson));*/
 	console.log("in db insert", event_arr);
-	console.log(event_arr.results);
+	console.log(JSON.stringify(event_arr));
 
-	//console.log("i am in dbInsert", JSON.parse(events));
-	/*$.ajax({
+	$.ajax({
 		url: "http://localhost:5000/insertdata",
 		type: "POST",
-		data: JSON.stringify(events),
+		data: JSON.stringify(event_arr),
 		success: function(events) {
 			console.log("TestInsert was successfully executed");
 		},
 		error: function(textStatus, errorThrown) {
 			console.error("The following error occurred: " + textStatus, errorThrown);
 		}
-	});*/
-	/*
-	var request = new XMLHttpRequest();
+	});
+	/*var request = new XMLHttpRequest();
 	var uri = "http://localhost:5000/insertdata"
 	var params = "event=HOLD";
     request.open("POST", uri, true);
@@ -50,7 +55,6 @@ function dbInsert(event_arr) {
         }
     }
     request.send(params);	*/
-
 }
 
 function genQueryURL() {
@@ -77,13 +81,36 @@ function requestData(url) {
            var jsonResp = JSON.parse(resp);
            parseData(jsonResp, function(event_arr) {
            		dbInsert(event_arr);
-           		console.log("in the callback for parasdata", event_arr);
+           		//console.log("in the callback for parasdata", event_arr);
            });
         } 
     }
 }
 
+
 function parseData(data, callback) {
+    var counter = 0;
+    data.results.forEach(function(element, index) {
+    	var account = element.account_id;
+    	requestAccountData(element, account, function(resp) {
+        	//console.log("-----THE FOLLOWING IS PRINTED AFTER EACH ITERATION-----");
+       		//console.log("completed eventJSON:", resp);
+        	events.results.push(resp);
+        	//console.log("updated events object", events);
+       		counter ++;
+        	if (counter  == data.results.length) {
+            	//console.log("this is what events looks like after parseData", events);
+            	callback(events);
+        	}
+   		});
+	});
+};
+
+/*
+function parseData(data, callback) {
+
+
+	var events = {results: []};
 	data.results.forEach(function(element, index) {
 		var account = element.account_id;
 		requestAccountData(element, account, function(resp) {
@@ -96,7 +123,7 @@ function parseData(data, callback) {
 	
 	console.log("this is what events looks like after parseData", events);
 	callback(events);
-};
+};*/
 
 function requestAccountData(event, account, fn) {
 	var url = 'http://api.tripleseat.com/v1/accounts/' + account + '.json';
@@ -129,13 +156,14 @@ function setRespJSON(event, account) {
 		"b_timeIn": getTime(event.event_start),
 		"b_timeOut":  getTime(event.event_end),
 		"b_duration": "?", //getDuration(event.event_start, event.event_end),
-	// is booking type manual
+// is booking type manual
 		"b_type": "?", 
 		"b_room": rooms,
 		"b_numAttendees": event.guest_count,
-	// where do i get this
-		"b_description": "--", 
-		"b_notes": "--", //manual
+// where do i get this
+		"b_description": "--",
+// manual 
+		"b_notes": "--", 
 		"f_value": "?",
 		"f_usageFee": "?",
 		"f_reduction": "?",
@@ -278,8 +306,10 @@ function setCustomFields(data, respJSON) {
 				}
 			}
 		// Mission of the Event
-		} else if (current.custom_field_id == 17484 && current.value != null) { 
-			respJSON.b_description = data.value;
+		} else if (current.custom_field_id == 17484 && current.value != null) {
+			if (data.value != null) {
+				respJSON.b_description = data.value;
+			} 
 		// Cost Reduction?
 		} else if (current.custom_field_id == 17532 && current.value != null) { 
 			respJSON.f_numReduced = 1;

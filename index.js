@@ -68,7 +68,6 @@ app.post('/query', function(req, response) {
 	console.log("received a request in /query");
 	response.header("Access-Control-Allow-Origin","*");
 	response.header("Access-Control-Allow-Headers", "X-Requested-With");
-	//console.log(req.body);
 	//location_ids=4520 is district hall
 	var url = req.body.url + '&location_ids=4520'+ '&sort_direction=asc&order=event_start' + '&event_start_date=' + req.body.event_start_date + '&event_end_date=' + req.body.event_end_date;
 	console.log(url);
@@ -118,24 +117,111 @@ app.post('/account', function(req, response) {
 app.post('/insertdata', function(request, response) {
 	var connection = new Connection(config);
 	console.log("received a request in /insertdata");
-	console.log(request.body);
+	//console.log(request.body);
 	response.header("Access-Control-Allow-Origin","*");
 	response.header("Access-Control-Allow-Headers", "X-Requested-With");
-	/*var name = request.body.event;
+
 	connection.on('connect', function(err) {
   	  if (err) {
    	    console.log(err)
   	  } else {
         console.log('Connected to DB');
-        var date = "2017-09-04";
-        insertData(name, date, connection);
-        response.send("something");
+       console.log('in server this is what the request body looks like' + request.body);
+        console.log(request.body);  // returns [object, Object], cannot be passed into JSON.parse
+        var temp = JSON.stringify(request.body); // prints {"{\"results\":":{"{\"event_name\":\"name1\",\"event_date\":\"date1\"},{\"event_name\":\"name2\",\"event_date\":\"date2\"}":""}}
+        var temp2 = JSON.parse(temp); // prints { '{"results":': { '{"event_name":"name1","event_date":"date1"},{"event_name":"name2","event_date":"date2"}': '' } }
+        console.log(temp);
+        console.log(temp2);
+        //insertData(request.body, connection);
+        //response.send("something");
       }
-    });*/
+    });
 });
 
-function insertData(name, date, connection) {
-	console.log("Inserting '" + name + "' into Table...");
+function setStatement(data) {
+  console.log("in set statement" + data);
+}
+
+function insertData(data, connection) {
+  //var events = JSON.stringify(data);
+  //var events2 = JSON.parse(events)
+  console.log("in insert data" + data);
+  console.log("NEW STUFF HERE ---------------------------------------");
+  console.log(data.results);
+  var temp = JSON.stringify(data);
+  var temp2 = JSON.parse(temp);
+  console.log(temp);
+  console.log(temp2); 
+  //console.log(temp2.results)
+
+ /* for (var i = 0; i < events.results.length; i++) {
+    var current = events.results[i];
+    var statement = setStatement(current);*/
+    /*request = new Request(statement, function(err, rowCount, rows) {
+      if (err) {
+        console.log(err + 'error has occured');
+      } else {
+        console.log(rowCount + 'row(s) inserted');
+      }
+    });
+
+    request.addParameter('p_eventclient', TYPES.NVarChar, current.event_client);
+    request.addParameter('p_bdate', TYPES.Date, current.b_date);
+    request.addParameter('p_btimeIn', TYPES.Time, current.b_timeIn);
+    request.addParameter('p_btimeOut', TYPES.Time, current.b_timeOut);
+    request.addParameter('p_bdur', TYPES.Time, current.b_duration);
+    request.addParameter('p_btype', TYPES.NVarChar, current.b_type);
+    request.addParameter('p_broom', TYPES.NVarChar, current.b_room);
+    request.addParameter('p_bnumA', TYPES.Int, current.b_numAttendees);
+    request.addParameter('p_bdesc', TYPES.NVarChar, current.b_description);
+    request.addParameter('p_bnote', TYPES.NVarChar, current.b_notes);
+
+    connection.execSql(request);*/
+
+   /* "f_value": "?",
+    "f_usageFee": "?",
+    "f_reduction": "?",
+    "f_numReduced": 0,
+    "f_numInnovation": 0,
+    "f_paymentSystem": "--",
+    "f_transactionNum": "--",
+    "f_datePaid": "?",
+    "sp_onMission": 0,
+    "sp_npoStartup": 0,
+    "sp_publicCalendar": 0,
+    "sp_freeAttendance": 0,
+    "type_conferenceWorkshop": 0,
+    "type_meeting": 0,
+    "type_lecturePanel": 0,
+    "type_tour": 0,
+    "type_hackathon": 0,
+    "type_meetup": 0,
+    "type_networking": 0,
+    "type_social": 0,
+    "i_entrepreneurs": 0,
+    "i_startups": 0, 
+    "i_incAccel": 0,
+    "i_innoCommunity": 0,
+    "i_vcAngel": 0,
+    "i_makers": 0,
+    // sector tags on Tripleseat is inconsistent
+    "sect_lifeScience": 0,
+    "sect_tech": 0,
+    "sect_robotics": 0, 
+    "sect_education": 0,
+    "sect_socialImpact": 0,
+    "sect_sustainability": 0,
+    "sect_creative": 0,
+    "sect_law": 0,
+    "sect_financeInsurance": 0,
+    "sect_multisector": 0,
+    "sect_npo": 0,
+    "sect_global": 0,
+    "sect_government": 0,
+    "sect_community": 0,
+    "sect_largeCosOrgs": 0*/
+  //}
+	/*console.log("Inserting '" + name + "' into Table...");
 	// 'INSERT INTO test (event_client, b_date) OUTPUT INSERTED.Id VALUES (@e, @d);'
 
     request = new Request("INSERT INTO test2 (event_client, b_date) VALUES (@e, @d)",
@@ -151,7 +237,7 @@ function insertData(name, date, connection) {
     request.addParameter('d', TYPES.Date, date);
 
     // Execute SQL statement
-    connection.execSql(request);
+    connection.execSql(request);*/
 }
 
 function Start(callback) {
