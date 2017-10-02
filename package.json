@@ -16,6 +16,7 @@
     "express": "4.15.2",
     "oauth-1.0a": "^2.2.0",
     "request": "^2.81.0",
+    "tedious-connection-pool": "^1.0.5",
     "xmlhttprequest": "^1.8.0"
   },
   "repository": {

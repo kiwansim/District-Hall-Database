@@ -5,6 +5,7 @@ var crypto = require('crypto');
 var oauth = require('oauth-1.0a');
 var request = require('request');
 var Connection = require('tedious').Connection;
+var ConnectionPool = require('tedious-connection-pool');
 var Request = require('tedious').Request;
 var TYPES = require('tedious').TYPES;
 
@@ -37,9 +38,28 @@ var tripleseat = oauth({
 	}
 });
 /* ------------------------------------------------------------------------- */
+var poolConfig = {
+    min: 6,
+    max: 20,
+    log: true
+};
+
+var connectionConfig = {
+    userName: 'dh-admin', 
+    password: 'Innovation!',
+    server: 'districthall.database.windows.net', 
+    port: '1433',
+    options: {
+      database: 'QueryTesting', 
+      encrypt: true
+    }
+};
+
+//create the pool
+var pool = new ConnectionPool(poolConfig, connectionConfig);
 
 /* DATABASE CONNECTION */
-var config = {
+/*var config = {
      userName: 'dh-admin', 
      password: 'Innovation!',
      server: 'districthall.database.windows.net', 
@@ -48,7 +68,7 @@ var config = {
            database: 'QueryTesting', 
            encrypt: true
         }
-   }
+   }*/
 
 /* When uncommented, 'Connected to DB' prints to Terminal */
 /*connection.on('connect', function(err) {
@@ -114,130 +134,134 @@ app.post('/account', function(req, response) {
   });
 });
 
-app.post('/insertdata', function(request, response) {
-	var connection = new Connection(config);
-	console.log("received a request in /insertdata");
-	//console.log(request.body);
-	response.header("Access-Control-Allow-Origin","*");
-	response.header("Access-Control-Allow-Headers", "X-Requested-With");
 
-	connection.on('connect', function(err) {
-  	  if (err) {
-   	    console.log(err)
-  	  } else {
+app.post('/insertdata', function(request, response) {
+  console.log("received a request in /insertdata");
+  response.header("Access-Control-Allow-Origin","*");
+  response.header("Access-Control-Allow-Headers", "X-Requested-With");
+
+  pool.on('error', function(err) {
+    console.error(err);
+  });
+ 
+  request.body.results.forEach(function(element, index) {
+    pool.acquire(function (err, connection) {
+      if (err) {
+       console.error(err);
+       return;
+      } else {
         console.log('Connected to DB');
-       console.log('in server this is what the request body looks like' + request.body);
-        console.log(request.body);  // returns [object, Object], cannot be passed into JSON.parse
-        var temp = JSON.stringify(request.body); // prints {"{\"results\":":{"{\"event_name\":\"name1\",\"event_date\":\"date1\"},{\"event_name\":\"name2\",\"event_date\":\"date2\"}":""}}
-        var temp2 = JSON.parse(temp); // prints { '{"results":': { '{"event_name":"name1","event_date":"date1"},{"event_name":"name2","event_date":"date2"}': '' } }
-        console.log(temp);
-        console.log(temp2);
-        //insertData(request.body, connection);
-        //response.send("something");
+        console.log(element);
+        insertData(element, connection);
       }
     });
+
+    // possibly use this in a callback function
+    // when this is inside forEach, errors out with Error: Can't set headers after they are sent.
+    //response.send("inserted one row successfully");
+  });
+
+  response.send("inserted all rows from one request successfully");
+
+  /*pool.acquire(function (err, connection) {
+    if (err) {
+      console.error(err);
+      return;
+    } else {
+      console.log('Connected to DB');
+      console.log(request.body);
+      insertData(request.body, connection);
+      //response.send("something");
+    }*/
+
+    /*connection.on('connect', function(err) {
+      if (err) {
+        console.log(err);
+      } else {
+        console.log('Connected to DB');
+        console.log(request.body);
+        insertData(request.body, connection);
+        //response.send("something");
+      }
+    });*/
+  //});
+//	var connection = new Connection(config);
 });
 
-function setStatement(data) {
-  console.log("in set statement" + data);
+function setStatement() {
+  var statement = "INSERT INTO test3 (event_client, b_date, b_timeIn, b_timeOut, b_duration, b_type, b_room, b_numAttendees, b_description, b_notes, f_value, f_usageFee, f_reduction, f_numReduced, f_numInnovation, f_paymentSystem, f_transactionNum, f_datePaid, sp_onMission, sp_npoStartup, sp_publicCalendar, sp_freeAttendance, sect_lifeScience, sect_tech, sect_robotics, sect_education, sect_socialImpact, sect_sustainability, sect_creative, sect_law, sect_financeInsurance, sect_multisector, sect_npo, sect_global, sect_government, sect_community, sect_largeCosOrgs, type_conferenceWorkshop, type_meeting, type_lecturePanel, type_tour, type_hackathon, type_meetup, type_networking, type_social, i_entrepreneurs, i_startups, i_incAccel, i_innoCommunity, i_vcAngel, i_makers) VALUES (@p_evcli, @p_bdate, Cast(@p_btimeIn as Time), Cast(@p_btimeOut as Time), Cast(@p_bdur as Time), @p_btype, @p_broom, @p_bnumA, @p_bdesc, @p_bnote, Cast(@p_fval as Money), Cast(@p_ffee as Money), Cast(@p_freduc as Money), @p_fnumred, @p_fnuminno, @p_fpaysyst, @p_ftransnum, @p_fdatepaid, @p_sponmiss, @p_spnpo, @p_sppubcal, @p_spfree, @p_tyconf, @p_tymeeting, @p_tylec, @p_tytour, @p_tyhack, @p_tymeetup, @p_tynetwo, @p_tysoci, @p_ient, @p_istart, @p_iincacc, @p_innocom, @p_ivc, @p_imakers, @p_seclif, @p_sectech, @p_secrob, @p_seced, @p_secsocimp, @p_secsust, @p_seccreat, @p_seclaw, @p_secfin, @p_secmulti, @p_secnpo, @p_secglob, @p_secgov, @p_seccomm, @p_seclarge)";
+  return statement;
 }
 
 function insertData(data, connection) {
-  //var events = JSON.stringify(data);
-  //var events2 = JSON.parse(events)
-  console.log("in insert data" + data);
-  console.log("NEW STUFF HERE ---------------------------------------");
-  console.log(data.results);
-  var temp = JSON.stringify(data);
-  var temp2 = JSON.parse(temp);
-  console.log(temp);
-  console.log(temp2); 
-  //console.log(temp2.results)
+  var statement = setStatement();
+  var current = data;
+  request = new Request(statement, function(err, rowCount, rows) {
+    if (err) {
+      console.log(err + 'error has occured');
+    } else {
+      console.log(rowCount + 'row(s) inserted');
+      connection.release();
+    }
+  });
 
- /* for (var i = 0; i < events.results.length; i++) {
-    var current = events.results[i];
-    var statement = setStatement(current);*/
-    /*request = new Request(statement, function(err, rowCount, rows) {
-      if (err) {
-        console.log(err + 'error has occured');
-      } else {
-        console.log(rowCount + 'row(s) inserted');
-      }
-    });
+  // console.log(current.b_timeIn, current.b_date, current.event_client);
+  request.addParameter('p_evcli', TYPES.NVarChar, current.event_client);
+  request.addParameter('p_bdate', TYPES.Date, current.b_date);
+  request.addParameter('p_btimeIn', TYPES.NVarChar, current.b_timeIn);
+  request.addParameter('p_btimeOut', TYPES.NVarChar, current.b_timeOut);
+  request.addParameter('p_bdur', TYPES.NVarChar, current.b_duration);
+  request.addParameter('p_btype', TYPES.NVarChar, current.b_type);
+  request.addParameter('p_broom', TYPES.NVarChar, current.b_room);
+  request.addParameter('p_bnumA', TYPES.Int, current.b_numAttendees);
+  request.addParameter('p_bdesc', TYPES.NVarChar, current.b_description);
+  request.addParameter('p_bnote', TYPES.NVarChar, current.b_notes);
+  //console.log(current.f_value, current.f_usageFee, current.f_reduction);
+  request.addParameter('p_fval', TYPES.NVarChar, current.f_value);
+  request.addParameter('p_ffee', TYPES.NVarChar, current.f_usageFee);
+  request.addParameter('p_freduc', TYPES.NVarChar, current.f_reduction);
+  request.addParameter('p_fnumred', TYPES.Int, current.f_numReduced);
+  request.addParameter('p_fnuminno', TYPES.Int, current.f_numInnovation);
+  request.addParameter('p_fpaysyst', TYPES.NVarChar, current.f_paymentSystem);
+  request.addParameter('p_ftransnum', TYPES.NVarChar, current.f_transactionNum);
+  // change this later if I can figure out how to get the date paid to work
+  request.addParameter('p_fdatepaid', TYPES.NVarChar, current.f_datePaid);
+ 
+  request.addParameter('p_sponmiss', TYPES.Int, current.sp_onMission);
+  request.addParameter('p_spnpo', TYPES.Int, current.sp_npoStartup);
+  request.addParameter('p_sppubcal', TYPES.Int, current.sp_publicCalendar);
+  request.addParameter('p_spfree', TYPES.Int, current.sp_freeAttendance);
+  request.addParameter('p_tyconf', TYPES.Int, current.type_conferenceWorkshop);
+  request.addParameter('p_tymeeting', TYPES.Int, current.type_meeting);
+  request.addParameter('p_tylec', TYPES.Int, current.type_lecturePanel);
+  request.addParameter('p_tytour', TYPES.Int, current.type_tour);
+  request.addParameter('p_tyhack', TYPES.Int, current.type_hackathon);
+  request.addParameter('p_tymeetup', TYPES.Int, current.type_meetup);
+  request.addParameter('p_tynetwo', TYPES.Int, current.type_networking);
+  request.addParameter('p_tysoci', TYPES.Int, current.type_social);
+  request.addParameter('p_ient', TYPES.Int, current.i_entrepreneurs);
+  request.addParameter('p_istart', TYPES.Int, current.i_startups);
+  request.addParameter('p_iincacc', TYPES.Int, current.i_incAccel);
+  request.addParameter('p_innocom', TYPES.Int, current.i_innoCommunity);
+  request.addParameter('p_ivc', TYPES.Int, current.i_vcAngel);
+  request.addParameter('p_imakers', TYPES.Int, current.i_makers);
+  request.addParameter('p_seclif', TYPES.Int, current.sect_lifeScience);
+  request.addParameter('p_sectech', TYPES.Int, current.sect_tech);
+  request.addParameter('p_secrob', TYPES.Int, current.sect_robotics);
+  request.addParameter('p_seced', TYPES.Int, current.sect_education);
+  request.addParameter('p_secsocimp', TYPES.Int, current.sect_socialImpact);
+  request.addParameter('p_secsust', TYPES.Int, current.sect_sustainability);
+  request.addParameter('p_seccreat', TYPES.Int, current.sect_creative);
+  request.addParameter('p_seclaw', TYPES.Int, current.sect_law);
+  request.addParameter('p_secfin', TYPES.Int, current.sect_financeInsurance);
+  request.addParameter('p_secmulti', TYPES.Int, current.sect_multisector);
+  request.addParameter('p_secnpo', TYPES.Int, current.sect_npo);
+  request.addParameter('p_secglob', TYPES.Int, current.sect_global);
+  request.addParameter('p_secgov', TYPES.Int, current.sect_government);
+  request.addParameter('p_seccomm', TYPES.Int, current.sect_community);
+  request.addParameter('p_seclarge', TYPES.Int, current.sect_largeCosOrgs);
 
-    request.addParameter('p_eventclient', TYPES.NVarChar, current.event_client);
-    request.addParameter('p_bdate', TYPES.Date, current.b_date);
-    request.addParameter('p_btimeIn', TYPES.Time, current.b_timeIn);
-    request.addParameter('p_btimeOut', TYPES.Time, current.b_timeOut);
-    request.addParameter('p_bdur', TYPES.Time, current.b_duration);
-    request.addParameter('p_btype', TYPES.NVarChar, current.b_type);
-    request.addParameter('p_broom', TYPES.NVarChar, current.b_room);
-    request.addParameter('p_bnumA', TYPES.Int, current.b_numAttendees);
-    request.addParameter('p_bdesc', TYPES.NVarChar, current.b_description);
-    request.addParameter('p_bnote', TYPES.NVarChar, current.b_notes);
-
-    connection.execSql(request);*/
-
-   /* "f_value": "?",
-    "f_usageFee": "?",
-    "f_reduction": "?",
-    "f_numReduced": 0,
-    "f_numInnovation": 0,
-    "f_paymentSystem": "--",
-    "f_transactionNum": "--",
-    "f_datePaid": "?",
-    "sp_onMission": 0,
-    "sp_npoStartup": 0,
-    "sp_publicCalendar": 0,
-    "sp_freeAttendance": 0,
-    "type_conferenceWorkshop": 0,
-    "type_meeting": 0,
-    "type_lecturePanel": 0,
-    "type_tour": 0,
-    "type_hackathon": 0,
-    "type_meetup": 0,
-    "type_networking": 0,
-    "type_social": 0,
-    "i_entrepreneurs": 0,
-    "i_startups": 0, 
-    "i_incAccel": 0,
-    "i_innoCommunity": 0,
-    "i_vcAngel": 0,
-    "i_makers": 0,
-    // sector tags on Tripleseat is inconsistent
-    "sect_lifeScience": 0,
-    "sect_tech": 0,
-    "sect_robotics": 0, 
-    "sect_education": 0,
-    "sect_socialImpact": 0,
-    "sect_sustainability": 0,
-    "sect_creative": 0,
-    "sect_law": 0,
-    "sect_financeInsurance": 0,
-    "sect_multisector": 0,
-    "sect_npo": 0,
-    "sect_global": 0,
-    "sect_government": 0,
-    "sect_community": 0,
-    "sect_largeCosOrgs": 0*/
-  //}
-	/*console.log("Inserting '" + name + "' into Table...");
-	// 'INSERT INTO test (event_client, b_date) OUTPUT INSERTED.Id VALUES (@e, @d);'
-
-    request = new Request("INSERT INTO test2 (event_client, b_date) VALUES (@e, @d)",
-        function(err, rowCount, rows) {
-        if (err) {
-            callback(err);
-        } else {
-            console.log(rowCount + ' row(s) inserted');
-            //callback(null, 'Nikita', 'United States');
-        }
-        });
-    request.addParameter('e', TYPES.NVarChar, name);
-    request.addParameter('d', TYPES.Date, date);
-
-    // Execute SQL statement
-    connection.execSql(request);*/
+  connection.execSql(request); 
 }
 
 function Start(callback) {

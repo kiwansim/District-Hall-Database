@@ -2,7 +2,7 @@
 //var events = [];
 //var events = {"ev_objs": {}};
 //var events = {"results": []};
-var events = {};
+
 
 // calendar on UI
 $( function() {
@@ -25,36 +25,25 @@ function testInsert() {
 }
 
 function dbInsert(event_arr) {
-	var testjson = {
-		"results": [{"event_name": "name1", "event_date": "date1"}, {"event_name": "name2", "event_date": "date2"}]
-	};
-	/*console.log("in db insert", testjson);
-	console.log(JSON.stringify(testjson));*/
-	console.log("in db insert", event_arr);
-	console.log(JSON.stringify(event_arr));
-
+	/*console.log("in db insert", event_arr);
+	console.log(JSON.stringify(event_arr));*/
+	//for (event_arr.results.length)
 	$.ajax({
 		url: "http://localhost:5000/insertdata",
 		type: "POST",
 		data: JSON.stringify(event_arr),
+		contentType: "application/json",
 		success: function(events) {
 			console.log("TestInsert was successfully executed");
 		},
 		error: function(textStatus, errorThrown) {
 			console.error("The following error occurred: " + textStatus, errorThrown);
 		}
+	}).done(function(data, statusText, xhr){
+  		var status = xhr.status;                //200
+  		var head = xhr.getAllResponseHeaders(); //Detail header info
+  		console.log("dbInsert executed with status code ", status);
 	});
-	/*var request = new XMLHttpRequest();
-	var uri = "http://localhost:5000/insertdata"
-	var params = "event=HOLD";
-    request.open("POST", uri, true);
-    request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-    request.onreadystatechange = function() {
-        if (request.readyState === 4 && request.status === 200) {
-        	console.log("TestInsert was successfully executed");
-        }
-    }
-    request.send(params);	*/
 }
 
 function genQueryURL() {
@@ -87,11 +76,33 @@ function requestData(url) {
     }
 }
 
-
+/* V3
 function parseData(data, callback) {
+	var events = {};
+	var counter = 0;
+    data.results.forEach(function(element, index) {
+    	var account = element.account_id;
+    	requestAccountData(element, account, function(resp) {
+    		var key = "result" + counter;
+    		console.log(key);
+        	events[key] = resp;
+        	//console.log("updated events object", events);
+       		counter ++;
+        	if (counter  == data.results.length) {
+            	//console.log("this is what events looks like after parseData", events);
+            	callback(events);
+        	}
+   		});
+	});	
+}*/
+
+// V2
+function parseData(data, callback) {
+	var events = {"results": []}
     var counter = 0;
     data.results.forEach(function(element, index) {
     	var account = element.account_id;
+    	console.log(element);
     	requestAccountData(element, account, function(resp) {
         	//console.log("-----THE FOLLOWING IS PRINTED AFTER EACH ITERATION-----");
        		//console.log("completed eventJSON:", resp);
@@ -106,7 +117,7 @@ function parseData(data, callback) {
 	});
 };
 
-/*
+/* V1
 function parseData(data, callback) {
 
 
@@ -139,39 +150,43 @@ function requestAccountData(event, account, fn) {
            var resp = request.responseText;
            var jsonResp = JSON.parse(resp);
            var newResp = setRespJSON(event, jsonResp);
-           fn(newResp);
-           //return newResp;
            //console.log(newResp);
-           //events.push(newResp);
+           fn(newResp);
         } 
     }
 }
 
 
 function setRespJSON(event, account) {
+	//getDuration(event.event_start, event.event_end);
 	var rooms = setRooms(event.rooms);
+
 	var respJSON = {
 		"event_client": event.name,
 		"b_date": event.event_date,
 		"b_timeIn": getTime(event.event_start),
 		"b_timeOut":  getTime(event.event_end),
-		"b_duration": "?", //getDuration(event.event_start, event.event_end),
-// is booking type manual
+		"b_duration": getDuration(event.event_start, event.event_end),
+// delete event vs meeting 
 		"b_type": "?", 
-		"b_room": rooms,
-		"b_numAttendees": event.guest_count,
+		"b_room": setRooms(event.rooms),
+		"b_numAttendees": setNumericValue(event.guest_count),
 // where do i get this
+//event mission and why host
 		"b_description": "--",
 // manual 
 		"b_notes": "--", 
-		"f_value": "?",
-		"f_usageFee": "?",
-		"f_reduction": "?",
+		"f_value": setNumericValue(event.actual_amount),
+		"f_usageFee": setNumericValue(event.grand_total),
+		"f_reduction": setReduction(event.actual_amount, event.grand_total),
 		"f_numReduced": 0,
 		"f_numInnovation": 0,
+// stripe integration or
 		"f_paymentSystem": "--",
 		"f_transactionNum": "--",
+// is the date due consistent with date paid?? this is not on tripleseat
 		"f_datePaid": "?",
+
 		"sp_onMission": 0,
 		"sp_npoStartup": 0,
 		"sp_publicCalendar": 0,
@@ -190,7 +205,8 @@ function setRespJSON(event, account) {
 		"i_innoCommunity": 0,
 		"i_vcAngel": 0,
 		"i_makers": 0,
-		// sector tags on Tripleseat is inconsistent
+
+// sector tags on Tripleseat is inconsistent
 		"sect_lifeScience": 0,
 		"sect_tech": 0,
 		"sect_robotics": 0, 
@@ -220,14 +236,24 @@ function getTime(data) {
 	if (mins == "0"){
 		mins = "00";
 	}
-	return hrs + ":" + mins;
+	var result = hrs + ':' + mins;
+	console.log(result);
+	return result;
 }
 
 function getDuration(start, end) {
 	var startDate = new Date(start);
 	var endDate = new Date(end);
-	var timeDiff = new Date(endDate - startDate);
-	console.log(endDate, startDate, timeDiff);
+	// unsure why /1000 but 3600 is num min in hr
+	var timeDiff = ((endDate - startDate) / 1000)/60;
+	var diff_hr = Math.floor(timeDiff / 60);
+	var diff_min = timeDiff % 60;
+
+	if (diff_min == "0"){
+		diff_min = "00";
+	}
+	var result = diff_hr + ':' + diff_min;
+	return result;
 }
 
 function setRooms(data) {
@@ -241,6 +267,20 @@ function setRooms(data) {
 	}
 	return rooms;
 }
+
+function setNumericValue(data) {
+	var value = 0;
+	if (data != null) {
+		value = data;
+	}
+
+	return value;
+}
+
+function setReduction(actual, total) {
+	return (actual - total);
+}
+
 
 function setSectorAnalysis(data, respJSON) {
 	//console.log(data);
